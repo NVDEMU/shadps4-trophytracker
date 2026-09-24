@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShadPS4 Trophy Tracker</title>
+  <meta name="description" content="Browse the PS4 catalog and track trophies earned while playing on ShadPS4.">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#games" aria-label="ShadPS4 Trophy Tracker home">
+      <span class="brand-mark">S4</span>
+      <span>ShadPS4 Trophy Tracker</span>
+    </a>
+    <nav id="nav" class="nav">
+      <a href="#games">Games</a>
+      <a href="#dashboard" data-auth-only>Dashboard</a>
+      <a href="#trophies" data-auth-only>My Trophies</a>
+    </nav>
+    <div id="accountArea" class="account-area">
+      <button class="ghost-button" id="loginOpen">Log in</button>
+      <button class="primary compact" id="registerOpen">Create account</button>
+    </div>
+  </header>
+  <main class="shell">
+    <section id="gamesPage" class="page"></section>
+    <section id="dashboardPage" class="page" hidden></section>
+    <section id="trophiesPage" class="page" hidden></section>
+    <section id="gamePage" class="page" hidden></section>
+  </main>
+  <div id="authModal" class="modal" aria-hidden="true">
+    <div class="modal-card auth-modal">
+      <div class="card-row"><div><div class="eyebrow">SHADPS4 ACCOUNT</div><h2 id="authTitle">Log in</h2></div><button class="ghost-button" id="closeAuth">Close</button></div>
+      <div class="tabs"><button class="tab active" data-auth="login">Log in</button><button class="tab" data-auth="register">Create account</button></div>
+      <form id="loginForm" class="auth-form">
+        <label>Username<input name="username" autocomplete="username" required maxlength="24"></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+        <button class="primary" type="submit">Log in</button>
+      </form>
+      <form id="registerForm" class="auth-form" hidden>
+        <label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+"></label>
+        <label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8"></label>
+        <button class="primary" type="submit">Create account</button>
+      </form>
+      <p id="authMessage" class="form-message"></p>
+    </div>
+  </div>
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
