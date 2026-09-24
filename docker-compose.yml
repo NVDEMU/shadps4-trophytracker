@@ -1,0 +1,14 @@
+services:
+  tracker:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      COOKIE_SECURE: "false"
+      DATA_FILE: /app/data/db.json
+      SESSION_DAYS: 30
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

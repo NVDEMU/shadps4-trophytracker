@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShadPS4 Trophy Tracker</title>
+  <meta name="description" content="Track your PS4 trophies earned while playing through ShadPS4.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#dashboard" aria-label="ShadPS4 Trophy Tracker home">
+      <span class="brand-mark">S4</span>
+      <span>ShadPS4 Trophy Tracker</span>
+    </a>
+    <nav id="nav" class="nav" hidden>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#games">Games</a>
+      <a href="#trophies">My Trophies</a>
+      <button id="logout" class="ghost-button">Log out</button>
+    </nav>
+    <div id="accountArea" class="account-area"></div>
+  </header>
+
+  <main class="shell">
+    <section id="authView" class="auth-grid">
+      <div class="hero-card">
+        <div class="eyebrow">PS4 • SHADPS4</div>
+        <h1>Keep every trophy you earn in one place.</h1>
+        <p>Create an account, search the PS4 catalog, and track your own trophy progress without putting that data in browser-only storage.</p>
+        <div class="feature-row">
+          <span>12K+ catalog sync</span>
+          <span>Private progress</span>
+          <span>Persistent accounts</span>
+        </div>
+      </div>
+      <div class="auth-card">
+        <div class="tabs">
+          <button class="tab active" data-auth="login">Log in</button>
+          <button class="tab" data-auth="register">Create account</button>
+        </div>
+        <form id="loginForm" class="auth-form">
+          <label>Username<input name="username" autocomplete="username" required maxlength="24"></label>
+          <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+          <button class="primary" type="submit">Log in</button>
+        </form>
+        <form id="registerForm" class="auth-form" hidden>
+          <label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+"></label>
+          <label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8"></label>
+          <button class="primary" type="submit">Create account</button>
+        </form>
+        <p id="authMessage" class="form-message"></p>
+      </div>
+    </section>
+
+    <section id="appView" hidden>
+      <div id="dashboardPage" class="page"></div>
+      <div id="gamesPage" class="page" hidden></div>
+      <div id="trophiesPage" class="page" hidden></div>
+      <div id="gamePage" class="page" hidden></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
