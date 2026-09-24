@@ -13,6 +13,9 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = path.resolve(process.env.DATA_FILE || path.join(__dirname, 'data', 'db.json'));
 const SESSION_DAYS = Math.max(1, Number(process.env.SESSION_DAYS || 30));
 const COOKIE_SECURE = String(process.env.COOKIE_SECURE || 'false').toLowerCase() === 'true';
+const CATALOG_LETTERS = ['_', ...'abcdefghijklmnopqrstuvwxyz'];
+const CATALOG_BASE = 'https://raw.githubusercontent.com/Ephellon/game-store-catalog/main/ps4';
+const FALLBACK_GAMES = ['Astro Bot Rescue Mission','Bloodborne','Days Gone','Death Stranding','Demon\'s Souls','Ghost of Tsushima','God of War','Gran Turismo Sport','Horizon Zero Dawn','LittleBigPlanet 3','Marvel\'s Spider-Man','Ratchet & Clank','Red Dead Redemption 2','Resident Evil 2','Resident Evil 7: Biohazard','Shadow of the Colossus','The Last of Us Remastered','Uncharted 4: A Thief\'s End','Until Dawn','Persona 5','NieR:Automata','Sekiro: Shadows Die Twice','Dark Souls III','Final Fantasy VII Remake','Monster Hunter: World','Tekken 7','DOOM','DOOM Eternal','The Witcher 3: Wild Hunt','Cyberpunk 2077','Grand Theft Auto V'];
 
 const app = express();
 app.disable('x-powered-by');
@@ -27,7 +30,7 @@ let db = {
   games: [],
   trophies: [],
   activity: [],
-  meta: { catalogUpdatedAt: null }
+  meta: { catalogUpdatedAt: null, catalogSyncError: null }
 };
 let writeChain = Promise.resolve();
 
@@ -42,7 +45,7 @@ async function ensureDb() {
       games: Array.isArray(parsed.games) ? parsed.games : [],
       trophies: Array.isArray(parsed.trophies) ? parsed.trophies : [],
       activity: Array.isArray(parsed.activity) ? parsed.activity : [],
-      meta: { catalogUpdatedAt: parsed.meta?.catalogUpdatedAt || null }
+      meta: { catalogUpdatedAt: parsed.meta?.catalogUpdatedAt || null, catalogSyncError: parsed.meta?.catalogSyncError || null }
     };
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
@@ -157,8 +160,31 @@ function publicGame(game, userId = null) {
   };
 }
 
+async function syncCatalog() {
+  const catalog = new Map();
+  for (const letter of CATALOG_LETTERS) {
+    const response = await fetch(CATALOG_BASE + '/' + letter + '.json', { headers: { 'User-Agent': 'ShadPS4-Trophy-Tracker/1.0' } });
+    if (!response.ok) throw new Error('Catalog fetch failed for ' + letter + '.json (' + response.status + ')');
+    const items = await response.json();
+    for (const raw of items) {
+      if (!raw?.uuid || !raw?.name || !Array.isArray(raw.platforms) || !raw.platforms.includes('PS4')) continue;
+      catalog.set(raw.uuid, normalizeGame(raw));
+    }
+  }
+  db.games = [...catalog.values()].sort((a,b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  db.meta.catalogUpdatedAt = now();
+  db.meta.catalogSyncError = null;
+  await persist();
+  return db.games.length;
+}
+function seedFallbackGames() {
+  if (db.games.length) return false;
+  db.games = FALLBACK_GAMES.map((name, i) => ({ id:'fallback_' + String(i + 1).padStart(3,'0'), uuid:null, name, image:null, href:null, price:null, rating:'PS4 game', platforms:['PS4'], updatedAt:now() }));
+  return true;
+}
+
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, games: db.games.length, users: db.users.length, catalogUpdatedAt: db.meta.catalogUpdatedAt });
+  res.json({ ok: true, games: db.games.length, users: db.users.length, catalogUpdatedAt: db.meta.catalogUpdatedAt, catalogSyncError: db.meta.catalogSyncError });
 });
 
 app.get('/api/me', (req, res) => {
@@ -210,6 +236,18 @@ app.post('/api/auth/logout', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+app.post('/api/catalog/sync', async (req, res) => {
+  try {
+    const count = await syncCatalog();
+    res.json({ ok:true, count, catalogUpdatedAt: db.meta.catalogUpdatedAt });
+  } catch (error) {
+    db.meta.catalogSyncError = error.message;
+    seedFallbackGames();
+    await persist();
+    res.status(503).json({ error:'Full catalog sync unavailable right now. ' + error.message, count:db.games.length });
+  }
+});
+
 app.get('/api/catalog', (req, res) => {
   const user = currentUser(req);
   const q = String(req.query.q || '').trim().toLowerCase();
@@ -229,7 +267,7 @@ app.get('/api/catalog', (req, res) => {
   const total = games.length;
   const start = (page - 1) * pageSize;
   const items = games.slice(start, start + pageSize).map((g) => publicGame(g, user?.id));
-  res.json({ items, page, pageSize, total, pages: Math.ceil(total / pageSize), catalogUpdatedAt: db.meta.catalogUpdatedAt });
+  res.json({ items, page, pageSize, total, pages: Math.ceil(total / pageSize), catalogUpdatedAt: db.meta.catalogUpdatedAt, catalogSyncError: db.meta.catalogSyncError });
 });
 
 app.get('/api/games/:id', (req, res) => {
@@ -330,6 +368,11 @@ app.use((req, res, next) => {
 });
 
 await ensureDb();
+if (!db.games.length) { seedFallbackGames(); await persist(); }
+if (!db.meta.catalogUpdatedAt) {
+  syncCatalog().then((count) => console.log('Initial PS4 catalog sync complete: ' + count + ' entries.'))
+    .catch((error) => console.warn('Initial catalog sync skipped: ' + error.message));
+}
 app.listen(PORT, HOST, () => {
   console.log(`ShadPS4 Trophy Tracker running at http://${HOST}:${PORT}`);
   console.log(`Games in catalog: ${db.games.length}`);
