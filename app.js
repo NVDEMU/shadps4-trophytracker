@@ -43,6 +43,10 @@ async function renderGames(){showPage('games');const page=$('#gamesPage');page.i
   $('#gameSort').value=state.sort;$('#searchButton').onclick=()=>{state.catalogQuery=$('#gameSearch').value.trim();state.catalogPage=1;loadCatalog()};$('#clearButton').onclick=()=>{state.catalogQuery='';state.catalogPage=1;$('#gameSearch').value='';loadCatalog()};$('#gameSearch').onkeydown=e=>{if(e.key==='Enter')$('#searchButton').click()};$('#gameSort').onchange=e=>{state.sort=e.target.value;state.catalogPage=1;loadCatalog()};$('#syncCatalog').onclick=syncCatalog;await loadCatalog();}
 async function getStaticCatalog() {
   if (window.__staticCatalog) return window.__staticCatalog;
+  if (Array.isArray(window.__PS4_GAMES__) && window.__PS4_GAMES__.length) {
+    window.__staticCatalog = window.__PS4_GAMES__;
+    return window.__staticCatalog;
+  }
   const siteBase = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
   try {
     const response = await fetch(siteBase + 'data/games.json', { cache:'no-store' });
