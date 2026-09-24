@@ -3,7 +3,9 @@ import path from 'node:path';
 
 const letters = ['_', ...'abcdefghijklmnopqrstuvwxyz'];
 const base = 'https://raw.githubusercontent.com/Ephellon/game-store-catalog/main/ps4';
-const out = path.resolve('data', 'games.json');
+const outDir = path.resolve('data');
+const jsonOut = path.join(outDir, 'games.json');
+const jsOut = path.join(outDir, 'games.js');
 
 const games = new Map();
 for (const letter of letters) {
@@ -29,6 +31,8 @@ for (const letter of letters) {
 }
 
 const sorted = [...games.values()].sort((a,b) => a.name.localeCompare(b.name, undefined, { sensitivity:'base' }));
-await fs.mkdir(path.dirname(out), { recursive: true });
-await fs.writeFile(out, JSON.stringify(sorted));
-console.log('Wrote', sorted.length, 'PS4 games to', out);
+const payload = JSON.stringify(sorted);
+await fs.mkdir(outDir, { recursive: true });
+await fs.writeFile(jsonOut, payload);
+await fs.writeFile(jsOut, 'window.__PS4_GAMES__ = ' + payload + ';');
+console.log('Wrote', sorted.length, 'PS4 games to', jsonOut, 'and', jsOut);
