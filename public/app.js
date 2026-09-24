@@ -32,7 +32,8 @@ async function renderGames(){showPage('games');const page=$('#gamesPage');page.i
   $('#gameSort').value=state.sort;$('#searchButton').onclick=()=>{state.catalogQuery=$('#gameSearch').value.trim();state.catalogPage=1;loadCatalog()};$('#clearButton').onclick=()=>{state.catalogQuery='';state.catalogPage=1;$('#gameSearch').value='';loadCatalog()};$('#gameSearch').onkeydown=e=>{if(e.key==='Enter')$('#searchButton').click()};$('#gameSort').onchange=e=>{state.sort=e.target.value;state.catalogPage=1;loadCatalog()};$('#syncCatalog').onclick=syncCatalog;await loadCatalog();}
 async function getStaticCatalog() {
   if (window.__staticCatalog) return window.__staticCatalog;
-  const response = await fetch('./data/games.json', { cache:'no-store' });
+  const siteBase = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
+  const response = await fetch(siteBase + 'data/games.json', { cache:'no-store' });
   if (!response.ok) throw new Error('Static PS4 catalog is not available.');
   window.__staticCatalog = await response.json();
   return window.__staticCatalog;
@@ -52,8 +53,17 @@ async function catalogData() {
     return { items: games.slice(start,start+pageSize), page, pageSize, total: games.length, pages, catalogUpdatedAt: all[0]?.catalogUpdatedAt || null };
   }
 }
-async function loadCatalog(){const data = await catalogData();state.catalogPages=Math.max(1,data.pages||1);$('#catalogCount').textContent=`${data.total.toLocaleString()} catalog entries`;$('#heroCatalogCount').textContent=data.total.toLocaleString();$('#syncStatus').hidden=true;const grid=$('#gameGrid');grid.innerHTML=data.items.length?data.items.map(g=>`<article class="game-card"><a href="#game/${encodeURIComponent(g.id)}">${g.image?`<img class="cover" src="${escapeHtml(g.image)}" alt="" loading="lazy">`:'<div class="cover"></div>'}</a><div class="game-body"><a class="game-name" href="#game/${encodeURIComponent(g.id)}">${escapeHtml(g.name)}</a><div class="game-meta"><span>${escapeHtml(g.rating||'Game')}</span><span>${g.platforms.join(' / ')}</span></div>${g.trophyCount?`<div class="progress"><span style="width:${g.trophyPercent}%"></span></div><div class="meta-line"><span>${g.earnedTrophies}/${g.trophyCount} tracked</span><span>${g.trophyPercent}%</span></div>`:`<div class="meta-line"><span>${g.price||'PS4'}</span><span>Open →</span></div>`}</div></article>`).join(''):'<div class="empty">No PS4 games matched that search.</div>';
+async function loadCatalog(){
+  try {
+    const data = await catalogData();
+    state.catalogPages=Math.max(1,data.pages||1);$('#catalogCount').textContent=`${data.total.toLocaleString()} catalog entries`;$('#heroCatalogCount').textContent=data.total.toLocaleString();$('#syncStatus').hidden=true;const grid=$('#gameGrid');grid.innerHTML=data.items.length?data.items.map(g=>`<article class="game-card"><a href="#game/${encodeURIComponent(g.id)}">${g.image?`<img class="cover" src="${escapeHtml(g.image)}" alt="" loading="lazy">`:'<div class="cover"></div>'}</a><div class="game-body"><a class="game-name" href="#game/${encodeURIComponent(g.id)}">${escapeHtml(g.name)}</a><div class="game-meta"><span>${escapeHtml(g.rating||'Game')}</span><span>${g.platforms.join(' / ')}</span></div>${g.trophyCount?`<div class="progress"><span style="width:${g.trophyPercent}%"></span></div><div class="meta-line"><span>${g.earnedTrophies}/${g.trophyCount} tracked</span><span>${g.trophyPercent}%</span></div>`:`<div class="meta-line"><span>${g.price||'PS4'}</span><span>Open →</span></div>`}</div></article>`).join(''):'<div class="empty">No PS4 games matched that search.</div>';
   $('#pagination').innerHTML=`<button class="secondary" id="prev" ${data.page<=1?'disabled':''}>Previous</button><span class="muted">Page ${data.page} of ${Math.max(1,data.pages)}</span><button class="secondary" id="next" ${data.page>=data.pages?'disabled':''}>Next</button>`;$('#prev').onclick=()=>{state.catalogPage--;loadCatalog()};$('#next').onclick=()=>{state.catalogPage++;loadCatalog()};
+  } catch (error) {
+    $('#catalogCount').textContent='Catalog unavailable';
+    $('#heroCatalogCount').textContent='0';
+    $('#gameGrid').innerHTML='<div class="empty"><strong>PS4 catalog failed to load.</strong><br><br>'+escapeHtml(error.message)+'</div>';
+    $('#pagination').innerHTML='';
+  }
 }
 async function syncCatalog(){const box=$('#syncStatus');if(!box)return;box.hidden=false;box.textContent='Syncing the full PS4 catalog. This can take a little while on first run…';try{const r=await api('/api/catalog/sync',{method:'POST'});box.textContent=`Catalog synced: ${r.count.toLocaleString()} PS4 entries.`;state.catalogPage=1;await loadCatalog();toast('PS4 catalog synced.')}catch(e){box.textContent=`Catalog sync failed: ${e.message}`;toast(e.message)}}
 
