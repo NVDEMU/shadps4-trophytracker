@@ -1,3 +1,14 @@
+const BUILTIN_GAMES = [
+  'Astro Bot Rescue Mission','Bloodborne','Days Gone','Death Stranding','Demon\'s Souls',
+  'Ghost of Tsushima','God of War','Gran Turismo Sport','Horizon Zero Dawn',
+  'inFAMOUS Second Son','LittleBigPlanet 3','Marvel\'s Spider-Man','Ratchet & Clank',
+  'Red Dead Redemption 2','Resident Evil 2','Resident Evil 7: Biohazard',
+  'Shadow of the Colossus','The Last of Us Remastered','Uncharted 4: A Thief\'s End',
+  'Until Dawn','Persona 5','NieR:Automata','Sekiro: Shadows Die Twice',
+  'Dark Souls III','Final Fantasy VII Remake','Monster Hunter: World','Tekken 7',
+  'DOOM','DOOM Eternal','The Witcher 3: Wild Hunt','Cyberpunk 2077','Grand Theft Auto V'
+].map((name,i)=>({id:'builtin_'+(i+1),uuid:null,name,image:null,href:null,price:null,rating:'PS4 game',platforms:['PS4'],updatedAt:null}));
+
 const state = { user: null, catalogPage: 1, catalogPages: 1, catalogQuery: '', sort: 'name', currentGame: null, authMode: 'login' };
 const $ = (s) => document.querySelector(s);
 const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -33,9 +44,14 @@ async function renderGames(){showPage('games');const page=$('#gamesPage');page.i
 async function getStaticCatalog() {
   if (window.__staticCatalog) return window.__staticCatalog;
   const siteBase = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
-  const response = await fetch(siteBase + 'data/games.json', { cache:'no-store' });
-  if (!response.ok) throw new Error('Static PS4 catalog is not available.');
-  window.__staticCatalog = await response.json();
+  try {
+    const response = await fetch(siteBase + 'data/games.json', { cache:'no-store' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    window.__staticCatalog = await response.json();
+  } catch (error) {
+    console.warn('Static PS4 catalog load failed; using built-in catalog.', error);
+    window.__staticCatalog = BUILTIN_GAMES;
+  }
   return window.__staticCatalog;
 }
 async function catalogData() {
